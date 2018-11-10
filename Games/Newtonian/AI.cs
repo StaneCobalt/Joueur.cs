@@ -27,11 +27,14 @@ namespace Joueur.cs.Games.Newtonian
         /// This is your AI's player. It contains all the information about your player's state.
         /// </summary>
         public readonly Player Player;
-        #pragma warning restore 0169
-        #pragma warning restore 0649
+#pragma warning restore 0169
+#pragma warning restore 0649
 
         // <<-- Creer-Merge: properties -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
-        // you can add additional properties here for your AI to use
+        // you can add additional properties here for your AI to use'
+        List<Unit> interns { get; set; }
+        List<Unit> managers { get; set; }
+        List<Unit> physicists { get; set; }
         // <<-- /Creer-Merge: properties -->>
         #endregion
 
@@ -44,7 +47,7 @@ namespace Joueur.cs.Games.Newtonian
         public override string GetName()
         {
             // <<-- Creer-Merge: get-name -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
-            return "Newtonian C# Player"; // REPLACE THIS WITH YOUR TEAM NAME!
+            return "Tis but a Segfault"; // REPLACE THIS WITH YOUR TEAM NAME!
             // <<-- /Creer-Merge: get-name -->>
         }
 
@@ -59,6 +62,10 @@ namespace Joueur.cs.Games.Newtonian
             // <<-- Creer-Merge: start -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
             base.Start();
 
+            interns = new List<Unit>();
+            managers = new List<Unit>();
+            physicists = new List<Unit>();
+            
             Console.Clear();
             // <<-- /Creer-Merge: start -->>
         }
@@ -73,6 +80,17 @@ namespace Joueur.cs.Games.Newtonian
         {
             // <<-- Creer-Merge: game-updated -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
             base.GameUpdated();
+
+            foreach (Unit unit in this.Player.Units)
+            {
+                if (unit.Job.Title == "intern")
+                    interns.Add(unit);
+                else if (unit.Job.Title == "manager")
+                    managers.Add(unit);
+                else if (unit.Job.Title == "physicist")
+                    physicists.Add(unit);
+            }
+
             /*this.DisplayMap(); // be careful using this as it will probably cause your client to time out in this function.
             Console.ForegroundColor = ConsoleColor.White;
             Console.BackgroundColor = ConsoleColor.Black;*/
