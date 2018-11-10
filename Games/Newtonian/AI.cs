@@ -44,7 +44,7 @@ namespace Joueur.cs.Games.Newtonian
         public override string GetName()
         {
             // <<-- Creer-Merge: get-name -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
-            return "Tis but a Segfault"; // REPLACE THIS WITH YOUR TEAM NAME!
+            return "Newtonian C# Player"; // REPLACE THIS WITH YOUR TEAM NAME!
             // <<-- /Creer-Merge: get-name -->>
         }
 
@@ -73,11 +73,6 @@ namespace Joueur.cs.Games.Newtonian
         {
             // <<-- Creer-Merge: game-updated -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
             base.GameUpdated();
-            
-            // check if there are resources
-            // check if there are enemies
-            // do logic based on resources and enemies
-
             // <<-- /Creer-Merge: game-updated -->>
         }
 
