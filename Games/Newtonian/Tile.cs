@@ -156,10 +156,12 @@ namespace Joueur.cs.Games.Newtonian
         /// Checks if a Tile is pathable to units
         /// </summary>
         /// <returns>True if pathable, false otherwise</returns>
-        public bool IsPathable()
+        public bool IsPathable(Tile tile)
         {
             // <<-- Creer-Merge: is_pathable_builtin -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
-            return false; // DEVELOPER ADD LOGIC HERE
+            if(!tile.IsWall || tile.Unit != null || tile.Machine != null)
+                return false; // DEVELOPER ADD LOGIC HERE
+            return true;
             // <<-- /Creer-Merge: is_pathable_builtin -->>
         }
 
