@@ -197,6 +197,35 @@ namespace Joueur.cs.Games.Newtonian
                         }
                     }
                     else if (unit.Job.Title == "intern") {
+                        Tile target = null;
+
+                        bool needsRedium = false;
+                        if(this.Player.Heat < this.Player.Pressure + 10)
+                        {
+                            needsRedium = true;
+                        }
+                        else
+                        {
+                            needsRedium = false;
+                        }
+
+                        unit.Log("Hitman");
+                        if (!Whack(unit, "physicist")) {
+                            foreach (Tile tile in this.Game.Tiles)
+                            {
+                                if(tile.RediumOre > 0 && needsRedium)
+                                {
+                                    target = tile;
+                                    break;
+                                } else if(tile.BlueiumOre > 0 && !needsRedium)
+                                {
+                                    target = tile;
+                                    break;
+                                }
+                            }
+                        }
+
+                        /*
                         // If the unit is an intern, collects blueium ore.
                         // Note: You also need to collect redium ore.
 
@@ -244,9 +273,13 @@ namespace Joueur.cs.Games.Newtonian
                                 }
                             }
                         }
+                        */
                     }
                     ///////////////////////////////////////////CODE FOR MANAGER///////////////////
                     else if (unit.Job.Title == "manager") {
+
+                        unit.Log("Body Guard");
+
                         // Finds enemy interns, stuns, and attacks them if there is no blueium to take to the generator.
                         Tile physicist = null;
                         Tile intern = null;
@@ -498,6 +531,31 @@ namespace Joueur.cs.Games.Newtonian
 
         // <<-- Creer-Merge: methods -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
         // you can add additional methods here for your AI to call
+
+        private bool Whack(Unit unit, String enemyToStun)
+        {
+            foreach (Tile tile in unit.Tile.GetNeighbors())
+            {
+                if (tile.Unit != null)
+                {
+                    if (tile.Unit.Owner == this.Player.Opponent)
+                    {
+                        if (tile.Unit.Job.Title == enemyToStun)
+                        {
+                            if (tile.Unit.StunImmune == 0)
+                            {
+                                unit.Act(tile);
+                                return true;
+                            }
+                        }
+                        unit.Attack(tile);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         private void DisplayMap() {
             Console.SetCursorPosition(0, 0);
             Console.BackgroundColor = ConsoleColor.White;
