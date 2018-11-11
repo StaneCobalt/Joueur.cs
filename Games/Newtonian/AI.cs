@@ -152,10 +152,34 @@ namespace Joueur.cs.Games.Newtonian
                         // Finds enemy interns, stuns, and attacks them if there is no blueium to take to the generator.
                         Tile physicist = null;
                         Tile intern = null;
+                        Tile refined = null;
+                        Tile generator = null;
                         bool physicistFound = false;
                         bool internFound = false;
+                        bool refinedExists = false;
                         int currentPathLength = 0;
+                        
+                    //Prioritize collecting refined material:
+                        foreach(Tile tile in this.Game.Tiles)
+                        {
+                            if (tile.Redium > 0 || tile.Blueium > 0)
+                            {
+                                refinedExists = true;
+                                refined = tile;
+                            }
+                        }
 
+                        if (refinedExists && (unit.Blueium + unit.Redium) <= 3)
+                        {
+                            FetchRefined(unit, refined, 3);
+                        }
+                        else if(unit.Blueium + unit.Redium == 3)
+                        {
+                            DropRefined(unit, generator, 3);
+                        }
+                        
+                        else //do other manager things
+                        {
                         //find the first physicist.  set him as the target
                         foreach(Unit gameUnit in this.Game.Units)
                         {
@@ -199,6 +223,7 @@ namespace Joueur.cs.Games.Newtonian
                                     }
                                 }
                             }
+                        }
                         }
                         /*
                         foreach(Tile tile in physicist.GetNeighbors(2))
@@ -467,6 +492,43 @@ namespace Joueur.cs.Games.Newtonian
                 }
             }
         }
+        
+        private void FetchRefined(Unit unit, Tile target, int ammount)
+        {
+            foreach(Tile tile in unit.Tile.GetNeighbors())
+            {
+                if (tile.Redium > 0)
+                    unit.Pickup(tile, ammount, "redium");
+                else if (tile.Blueium > 0)
+                    unit.Pickup(tile, ammount, "blueum");
+            }
+            foreach(Tile tile in this.Game.Tiles)
+            {
+                /*right now this is equevalent to 
+                if(tile.Redium > 0 || tile.Blueium > 0){ ... }
+                But we need to add extra descision making later so I'm keeping it like this */
+                if(tile.Redium > 0)
+                {
+                    target = tile;
+                    break;
+                }
+                else if (tile.Blueium > 0)
+                {
+                    target = tile;
+                    break;
+                }
+            }
+            if(this.FindPath(unit.Tile, target).Count > 0)
+            {
+                while(unit.Moves > 0 && this.FindPath(unit.Tile, target).Count > 0)
+                {
+                    if(!unit.Move(this.FindPath(unit.Tile, target)[0]))
+                    {
+                        break;
+                    }
+                }
+            }
+        }
 
         // drops ore on adjacent machine or finds machine to move to
         private void DropOre(Unit unit, Tile target)
@@ -499,6 +561,47 @@ namespace Joueur.cs.Games.Newtonian
                     }
                 }
             }
+            
+            //run this if a manager has refined material
+        //drops off refined at friendly generator, or runs to friendly generator.
+        private void DropRefined(Unit unit, Tile target, int ammount)
+        {
+            bool friendlyFound = false;
+            //drop refined in friendly generator:
+            foreach(Tile tile in unit.Tile.GetNeighbors())
+            {
+                if(tile.Type == "generator" && tile.Owner == this.Player)
+                {
+                    friendlyFound = true;
+                    if (unit.Blueium > 0)
+                        unit.Drop(tile, unit.Blueium, "blueium");
+                    else if (unit.Redium > 0)
+                        unit.Drop(tile, unit.Redium, "redium");
+                    else Console.WriteLine(unit.ToString() + ": Error, nothing to drop off");
+                }
+            }
+            //find friendly generator:
+            if (!friendlyFound)
+            {
+                foreach (Tile tile in this.Game.Tiles)
+                {
+                    if (tile.Type == "generator" && tile.Owner == this.Player)
+                        target = tile;
+                }
+            }
+            if (this.FindPath(unit.Tile, target).Count > 0)
+            {
+                while (unit.Moves > 0 && this.FindPath(unit.Tile, target).Count > 0)
+                {
+                    if (!unit.Move(this.FindPath(unit.Tile, target)[0]))
+                    {
+                        break;
+                    }
+                }
+            }
+    
+
+        } 
 
             // moves to machine
             if (this.FindPath(unit.Tile, target).Count > 0)
