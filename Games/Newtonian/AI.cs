@@ -119,6 +119,18 @@ namespace Joueur.cs.Games.Newtonian
         /// <returns>Represents if you want to end your turn. True means end your turn, False means to keep your turn going and re-call this function.</returns>
         public bool RunTurn()
         {
+            Tile target = null;
+
+            bool needsRedium = false;
+            if (this.Player.Heat < this.Player.Pressure + 10)
+            {
+                needsRedium = true;
+            }
+            else
+            {
+                needsRedium = false;
+            }
+
             // <<-- Creer-Merge: runTurn -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
             // Put your game logic here for runTurn
             /*DisplayMap();
@@ -140,7 +152,6 @@ namespace Joueur.cs.Games.Newtonian
 
                         // Tries to find a workable machine for blueium ore.
                         // Note: You need to get redium ore as well.
-                        Tile target = null;
 
                         // Goes through all the machines in the game and picks one that is ready to process ore as its target.
                         foreach (Machine machine in this.Game.Machines) {
@@ -197,83 +208,11 @@ namespace Joueur.cs.Games.Newtonian
                         }
                     }
                     else if (unit.Job.Title == "intern") {
-                        Tile target = null;
-
-                        bool needsRedium = false;
-                        if(this.Player.Heat < this.Player.Pressure + 10)
-                        {
-                            needsRedium = true;
-                        }
-                        else
-                        {
-                            needsRedium = false;
-                        }
-
                         unit.Log("Hitman");
-                        if (!Whack(unit, "physicist")) {
-                            foreach (Tile tile in this.Game.Tiles)
-                            {
-                                if(tile.RediumOre > 0 && needsRedium)
-                                {
-                                    target = tile;
-                                    break;
-                                } else if(tile.BlueiumOre > 0 && !needsRedium)
-                                {
-                                    target = tile;
-                                    break;
-                                }
-                            }
+                        if (!Whack(unit, "physicist"))
+                        {
+                            FetchOre(unit, target);
                         }
-
-                        /*
-                        // If the unit is an intern, collects blueium ore.
-                        // Note: You also need to collect redium ore.
-
-                        // Goes to gather resources if currently carrying less than the carry limit.
-                        if (unit.BlueiumOre < unit.Job.CarryLimit) {
-                            // Your intern's current target.
-                            Tile target = null;
-
-                            // Goes to collect blueium ore that isn't on a machine.
-                            foreach (Tile tile in this.Game.Tiles) {
-                                if (tile.BlueiumOre > 0 && tile.Machine == null) {
-                                    target = tile;
-                                    break;
-                                }
-                            }
-                            // Moves towards our target until at the target or out of moves.
-                            if (this.FindPath(unit.Tile, target).Count > 0) {
-                                while (unit.Moves > 0 && this.FindPath(unit.Tile, target).Count > 0) {
-                                    if (!unit.Move(this.FindPath(unit.Tile, target)[0])) {
-                                        break;
-                                    }
-                                }
-                            }
-                            // Picks up the appropriate resource once we reach our target's tile.
-                            if (unit.Tile == target && target.BlueiumOre > 0) {
-                                unit.Pickup(target, 0, "blueium ore");
-                            }
-                        }
-                        else {
-                            // Deposits blueium ore in a machine for it if we have any.
-
-                            // Finds a machine in the game's tiles that takes blueium ore.
-                            foreach (Tile tile in this.Game.Tiles) {
-                                if (tile.Machine != null && tile.Machine.OreType == "blueium") {
-                                    // Moves towards the found machine until we reach it or are out of moves.
-                                    while (unit.Moves > 0 && this.FindPath(unit.Tile, tile).Count > 1) {
-                                        if (!unit.Move(this.FindPath(unit.Tile, tile)[0])) {
-                                            break;
-                                        }
-                                    }
-                                    // Deposits blueium ore on the machine if we have reached it.
-                                    if (this.FindPath(unit.Tile, tile).Count <= 1) {
-                                        unit.Drop(tile, 0, "blueium ore");
-                                    }
-                                }
-                            }
-                        }
-                        */
                     }
                     ///////////////////////////////////////////CODE FOR MANAGER///////////////////
                     else if (unit.Job.Title == "manager") {
@@ -554,6 +493,43 @@ namespace Joueur.cs.Games.Newtonian
                 }
             }
             return false;
+        }
+
+        private void FetchOre(Unit unit, Tile target)
+        {
+            bool needsRedium = (this.Player.Heat < this.Player.Pressure + 5) ? true : false;
+
+            foreach (Tile tile in this.Game.Tiles)
+            {
+                if (tile.RediumOre > 0 && needsRedium)
+                {
+                    target = tile;
+                    break;
+                }
+                else if (tile.BlueiumOre > 0 && !needsRedium)
+                {
+                    target = tile;
+                    break;
+                }
+            }
+        
+            if (this.FindPath(unit.Tile, target).Count > 0)
+            {
+                while (unit.Moves > 0 && this.FindPath(unit.Tile, target).Count > 0)
+                {
+                    if (!unit.Move(this.FindPath(unit.Tile, target)[0]))
+                    {
+                        break;
+                    }
+                }
+            }
+            else if (this.FindPath(unit.Tile, target).Count == 0)
+            {
+                if (needsRedium)
+                    unit.Pickup(target, 4, "redium ore");
+                else
+                    unit.Pickup(target, 4, "bluemium ore");
+            }
         }
 
         private void DisplayMap() {
