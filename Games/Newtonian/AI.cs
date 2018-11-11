@@ -131,24 +131,29 @@ namespace Joueur.cs.Games.Newtonian
                 needsRedium = PriorityOre();
 
                 // Only tries to do something if the unit actually exists.
-                if (unit != null && unit.Tile != null)
+                if (unit != null && unit.Tile != null && unit.Health > 0 && unit.StunTime == 0)
                 {
                     if (unit.Job.Title == "physicist")
                     {
                         unit.Log("Nerd");
                         Whack(unit, "manager");
-                        WorkItHarderMakeItBetter(unit, target);
+                        if (!unit.Acted)
+                        {
+                            WorkItHarderMakeItBetter(unit, target);
+                        }
                     }
                     else if (unit.Job.Title == "intern")
                     {
                         internNum += 1;
-
                         unit.Log("Expendable");
                         Whack(unit, "physicist");
-                        if (unit.RediumOre == 0 && unit.BlueiumOre == 0)
-                            FetchOre(unit, target, internNum%2);
-                        else
-                            DropOre(unit, target, internNum%2);
+                        if (!unit.Acted)
+                        {
+                            if (unit.RediumOre == 0 && unit.BlueiumOre == 0)
+                                FetchOre(unit, target, internNum % 2);
+                            else
+                                DropOre(unit, target);
+                        }
                     }
                     ///////////////////////////////////////////CODE FOR MANAGER///////////////////
                     else if (unit.Job.Title == "manager")
@@ -183,28 +188,29 @@ namespace Joueur.cs.Games.Newtonian
                                 }
                             }
                         }
-                        
-                        //Prioritize collecting refined material:
-                        foreach (Tile tile in this.Game.Tiles)
+                        else
                         {
-                            if (tile.Redium > 0 || tile.Blueium > 0)
+                            //Prioritize collecting refined material:
+                            foreach (Tile tile in this.Game.Tiles)
                             {
-                                refinedExists = true;
-                                refined = tile;
+                                if (tile.Redium > 0 || tile.Blueium > 0)
+                                {
+                                    refinedExists = true;
+                                    refined = tile;
+                                }
                             }
-                        }
 
-                        if (refinedExists && (unit.Blueium + unit.Redium) < 3)
-                        {
-                            FetchRefined(unit, refined, 3);
-                        }
-                        else if (unit.Blueium + unit.Redium == 3)
-                        {
-                            DropRefined(unit, generator, 3);
-                        }
+                            if (refinedExists && (unit.Blueium + unit.Redium) < 3)
+                            {
+                                FetchRefined(unit, refined, 3);
+                            }
+                            else if (unit.Blueium + unit.Redium == 3)
+                            {
+                                DropRefined(unit, generator, 3);
+                            }
 
-                        Guard(unit, target, physicistFound);
-
+                            Guard(unit, target, physicistFound);
+                        }
                     }//end if manager
                 }
             }
@@ -294,7 +300,7 @@ namespace Joueur.cs.Games.Newtonian
                     {
                         if (tile.Unit.Job.Title == enemyToStun)
                         {
-                            if (tile.Unit.StunImmune == 0)
+                            if (tile.Unit.StunTime == 0 && tile.Unit.StunImmune == 0)
                             {
                                 unit.Act(tile);
                                 break;
@@ -317,14 +323,13 @@ namespace Joueur.cs.Games.Newtonian
             }
 
             // looks for adjacent ore, if found, picks it up
-            foreach(Tile tile in unit.Tile.GetNeighbors())
+            foreach (Tile tile in unit.Tile.GetNeighbors())
             {
                 if (tile.Machine == null)
                 {
-                    
-                    if (tile.RediumOre > 0 && justDoIt)
+                    if (tile.RediumOre > 0)
                         unit.Pickup(tile, unit.Job.CarryLimit, "redium ore");
-                    else if (tile.BlueiumOre > 0 && !justDoIt)
+                    else if (tile.BlueiumOre > 0)
                         unit.Pickup(tile, unit.Job.CarryLimit, "blueium ore");
                 }
             }
@@ -357,20 +362,20 @@ namespace Joueur.cs.Games.Newtonian
             }
         }
         
-        private void FetchRefined(Unit unit, Tile target, int ammount)
+        private void FetchRefined(Unit unit, Tile target, int amount)
         {
             foreach(Tile tile in unit.Tile.GetNeighbors())
             {
                 if (tile.Redium > 0)
-                    unit.Pickup(tile, ammount, "redium");
+                    unit.Pickup(tile, amount, "redium");
                 else if (tile.Blueium > 0)
-                    unit.Pickup(tile, ammount, "blueium");
+                    unit.Pickup(tile, amount, "blueium");
             }
             foreach(Tile tile in this.Game.Tiles)
             {
-                /*right now this is equevalent to 
+                /*right now this is equivalent to 
                 if(tile.Redium > 0 || tile.Blueium > 0){ ... }
-                But we need to add extra descision making later so I'm keeping it like this */
+                But we need to add extra decision making later so I'm keeping it like this */
                 if(tile.Redium > 0)
                 {
                     target = tile;
@@ -394,43 +399,76 @@ namespace Joueur.cs.Games.Newtonian
             }
         }
 
-        // drops ore on adjacent machine or finds machine to move to
-        private void DropOre(Unit unit, Tile target, int pattern)
+        public override void Invalid(string message)
         {
-            bool justDoIt = false;
-            if ((!redTeam && pattern == 1) || (redTeam && pattern == 0))
+            base.Invalid(message);
+            
+        }
+
+        // drops ore on adjacent machine or finds machine to move to
+        private void DropOre(Unit unit, Tile target)
+        {
+            // looks for machine of certain oretype
+            foreach (Machine machine in this.Game.Machines)
             {
-                justDoIt = true;
+                if (machine.OreType == "redium" && unit.RediumOre > 0)
+                {
+                    target = machine.Tile;
+                }
+                else if (machine.OreType == "blueium" && unit.BlueiumOre > 0)
+                {
+                    target = machine.Tile;
+                }
+            }
+
+            if(target == null)
+            {
+                Console.WriteLine("No target!");
+                return;
+            }
+
+            // moves to machine
+            if (this.FindPath(unit.Tile, target).Count > 0)
+            {
+                while (unit.Moves > 0 && this.FindPath(unit.Tile, target).Count > 0)
+                {
+                    if (!unit.Move(this.FindPath(unit.Tile, target)[0]))
+                    {
+                        break;
+                    }
+                }
             }
 
             // looks for adjacent machine of certain oretype, and drops ore
-            foreach (Tile tile in unit.Tile.GetNeighbors())
+            if (unit.BlueiumOre > 0)
             {
-                if (tile.Machine != null)
+                foreach (Tile tile in unit.Tile.GetNeighbors())
                 {
-                    if (tile.Machine.OreType == "redium" && justDoIt) {
-                        unit.Drop(tile, unit.Job.CarryLimit, "redium ore");
-                    } else if (tile.Machine.OreType == "blueium" && !justDoIt) {
-                        unit.Drop(tile, unit.Job.CarryLimit, "blueium ore");
+                    if (tile.Machine != null)
+                    {
+                        if (tile.Machine.OreType == "blueium")
+                        {
+                            unit.Drop(tile, unit.Job.CarryLimit, "blueium ore");
+                            break;
+                        }
+                    }
+                }
+            }
+            else if (unit.RediumOre > 0)
+            {
+                foreach (Tile tile in unit.Tile.GetNeighbors())
+                {
+                    if (tile.Machine != null)
+                    {
+                        if (tile.Machine.OreType == "redium")
+                        {
+                            unit.Drop(tile, unit.Job.CarryLimit, "redium ore");
+                            break;
+                        }
                     }
                 }
             }
 
-            // looks for machine of certain oretype
-            foreach (Tile tile in this.Game.Tiles)
-            {
-                if (tile.Machine != null)
-                {
-                    if (tile.Machine.OreType == "redium" && justDoIt)
-                    {
-                        target = tile;
-                    }
-                    else if (tile.Machine.OreType == "blueium" && !justDoIt)
-                    {
-                        target = tile;
-                    }
-                }
-            }
         }
             
         //run this if a manager has refined material
@@ -472,6 +510,8 @@ namespace Joueur.cs.Games.Newtonian
                     }
                 }
             }
+
+
         }
 
         private bool PriorityOre()
