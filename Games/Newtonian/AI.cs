@@ -123,7 +123,7 @@ namespace Joueur.cs.Games.Newtonian
             Please note: This code is intentionally bad. You should try to optimize everything here. THe code here is only to show you how to use the game's
                         mechanics with the MegaMinerAI server framework.
             */
-
+            int internNum = 0;
             // Goes through all the units that you own.
             foreach (Unit unit in this.Player.Units) {
                 Tile target = null;
@@ -135,18 +135,20 @@ namespace Joueur.cs.Games.Newtonian
                 {
                     if (unit.Job.Title == "physicist")
                     {
+                        unit.Log("Nerd");
                         Whack(unit, "manager");
                         WorkItHarderMakeItBetter(unit, target);
                     }
                     else if (unit.Job.Title == "intern")
                     {
+                        internNum += 1;
+
                         unit.Log("Expendable");
                         Whack(unit, "physicist");
                         if (unit.RediumOre == 0 && unit.BlueiumOre == 0)
-                            FetchOre(unit, target);
+                            FetchOre(unit, target, internNum%2);
                         else
-                            DropOre(unit, target);
-
+                            DropOre(unit, target, internNum%2);
                     }
                     ///////////////////////////////////////////CODE FOR MANAGER///////////////////
                     else if (unit.Job.Title == "manager")
@@ -157,12 +159,10 @@ namespace Joueur.cs.Games.Newtonian
                         // Finds enemy interns, stuns, and attacks them if there is no blueium to take to the generator.
                         Tile refined = null;
                         Tile generator = null;
-                        bool internFound = false;
                         bool physicistFound = false;
                         bool refinedExists = false;
-                        int mode = 0;
 
-                        if (this.Game.CurrentTurn <= 2)
+                        if (this.Game.CurrentTurn < 2)
                         {
                             foreach (Tile tile in this.Game.Tiles)
                             {
@@ -194,7 +194,7 @@ namespace Joueur.cs.Games.Newtonian
                             }
                         }
 
-                        if (refinedExists && (unit.Blueium + unit.Redium) <= 3)
+                        if (refinedExists && (unit.Blueium + unit.Redium) < 3)
                         {
                             FetchRefined(unit, refined, 3);
                         }
@@ -204,8 +204,6 @@ namespace Joueur.cs.Games.Newtonian
                         }
 
                         Guard(unit, target, physicistFound);
-
-
 
                     }//end if manager
                 }
@@ -310,16 +308,23 @@ namespace Joueur.cs.Games.Newtonian
         }
 
         // picks up adjacent ore or finds ore to move to
-        private void FetchOre(Unit unit, Tile target)
+        private void FetchOre(Unit unit, Tile target, int pattern)
         {
+            bool justDoIt = false;
+            if((!redTeam && pattern == 1)||(redTeam && pattern == 0))
+            {
+                justDoIt = true;
+            }
+
             // looks for adjacent ore, if found, picks it up
             foreach(Tile tile in unit.Tile.GetNeighbors())
             {
                 if (tile.Machine == null)
                 {
-                    if (tile.RediumOre > 0 && needsRedium)
+                    
+                    if (tile.RediumOre > 0 && justDoIt)
                         unit.Pickup(tile, unit.Job.CarryLimit, "redium ore");
-                    else if (tile.BlueiumOre > 0 && !needsRedium)
+                    else if (tile.BlueiumOre > 0 && !justDoIt)
                         unit.Pickup(tile, unit.Job.CarryLimit, "blueium ore");
                 }
             }
@@ -327,12 +332,12 @@ namespace Joueur.cs.Games.Newtonian
             // looks for tile that has ore
             foreach (Tile tile in this.Game.Tiles)
             {
-                if (tile.RediumOre > 0 && needsRedium)
+                if (tile.RediumOre > 0 && justDoIt)
                 {
                     target = tile;
                     break;
                 }
-                else if (tile.BlueiumOre > 0 && !needsRedium)
+                else if (tile.BlueiumOre > 0 && !justDoIt)
                 {
                     target = tile;
                     break;
@@ -359,7 +364,7 @@ namespace Joueur.cs.Games.Newtonian
                 if (tile.Redium > 0)
                     unit.Pickup(tile, ammount, "redium");
                 else if (tile.Blueium > 0)
-                    unit.Pickup(tile, ammount, "blueum");
+                    unit.Pickup(tile, ammount, "blueium");
             }
             foreach(Tile tile in this.Game.Tiles)
             {
@@ -390,16 +395,22 @@ namespace Joueur.cs.Games.Newtonian
         }
 
         // drops ore on adjacent machine or finds machine to move to
-        private void DropOre(Unit unit, Tile target)
+        private void DropOre(Unit unit, Tile target, int pattern)
         {
+            bool justDoIt = false;
+            if ((!redTeam && pattern == 1) || (redTeam && pattern == 0))
+            {
+                justDoIt = true;
+            }
+
             // looks for adjacent machine of certain oretype, and drops ore
             foreach (Tile tile in unit.Tile.GetNeighbors())
             {
                 if (tile.Machine != null)
                 {
-                    if (tile.Machine.OreType == "redium" && needsRedium) {
+                    if (tile.Machine.OreType == "redium" && justDoIt) {
                         unit.Drop(tile, unit.Job.CarryLimit, "redium ore");
-                    } else if (tile.Machine.OreType == "blueium" && !needsRedium) {
+                    } else if (tile.Machine.OreType == "blueium" && !justDoIt) {
                         unit.Drop(tile, unit.Job.CarryLimit, "blueium ore");
                     }
                 }
@@ -410,11 +421,11 @@ namespace Joueur.cs.Games.Newtonian
             {
                 if (tile.Machine != null)
                 {
-                    if (tile.Machine.OreType == "redium" && needsRedium)
+                    if (tile.Machine.OreType == "redium" && justDoIt)
                     {
                         target = tile;
                     }
-                    else if (tile.Machine.OreType == "blueium" && !needsRedium)
+                    else if (tile.Machine.OreType == "blueium" && !justDoIt)
                     {
                         target = tile;
                     }
@@ -447,16 +458,6 @@ namespace Joueur.cs.Games.Newtonian
                 {
                     if (tile.Type == "generator" && tile.Owner == this.Player)
                         target = tile;
-                }
-            }
-            if (this.FindPath(unit.Tile, target).Count > 0)
-            {
-                while (unit.Moves > 0 && this.FindPath(unit.Tile, target).Count > 0)
-                {
-                    if (!unit.Move(this.FindPath(unit.Tile, target)[0]))
-                    {
-                        break;
-                    }
                 }
             }
 
@@ -509,6 +510,23 @@ namespace Joueur.cs.Games.Newtonian
                 else if (machine.Tile.BlueiumOre >= machine.RefineInput && !needsRedium)
                 {
                     target = machine.Tile;
+                }
+            }
+
+            if(target == null)
+            {
+                //target = this.Player.SpawnTiles[0];
+                foreach(Tile tile in this.Game.Tiles)
+                {
+                    if (tile.Unit != null)
+                    {
+                        if(tile.Unit.Job.Title == "manager" && tile.Unit.Owner == this.Player.Opponent)
+                        {
+                            target = tile;
+                            break;
+                        }
+                    }
+                    
                 }
             }
 
