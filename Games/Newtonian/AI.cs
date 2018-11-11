@@ -32,10 +32,9 @@ namespace Joueur.cs.Games.Newtonian
 
         // <<-- Creer-Merge: properties -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
         // you can add additional properties here for your AI to use'
-        List<Unit> interns { get; set; }
-        List<Unit> managers { get; set; }
-        List<Unit> physicists { get; set; }
         bool needsRedium { get; set; }
+        bool redTeam { get; set; }
+        bool teamSet { get; set; }
         // <<-- /Creer-Merge: properties -->>
         #endregion
 
@@ -63,10 +62,10 @@ namespace Joueur.cs.Games.Newtonian
             // <<-- Creer-Merge: start -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
             base.Start();
 
-            interns = new List<Unit>();
-            managers = new List<Unit>();
-            physicists = new List<Unit>();
-            
+            needsRedium = false;
+            redTeam = false;
+            teamSet = false;
+
             Console.Clear();
             // <<-- /Creer-Merge: start -->>
         }
@@ -81,17 +80,6 @@ namespace Joueur.cs.Games.Newtonian
         {
             // <<-- Creer-Merge: game-updated -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
             base.GameUpdated();
-
-            foreach (Unit unit in this.Player.Units)
-            {
-                if (unit.Job.Title == "intern")
-                    interns.Add(unit);
-                else if (unit.Job.Title == "manager")
-                    managers.Add(unit);
-                else if (unit.Job.Title == "physicist")
-                    physicists.Add(unit);
-            }
-
             /*this.DisplayMap(); // be careful using this as it will probably cause your client to time out in this function.
             Console.ForegroundColor = ConsoleColor.White;
             Console.BackgroundColor = ConsoleColor.Black;*/
@@ -125,6 +113,11 @@ namespace Joueur.cs.Games.Newtonian
             /*DisplayMap();
             Console.ForegroundColor = ConsoleColor.White;
             Console.BackgroundColor = ConsoleColor.Black;*/
+            if(!teamSet)
+            {
+                redTeam = (this.Player.Units[0].Tile.TileWest.IsWall) ? true : false;
+                teamSet = true;
+            }
 
             /*
             Please note: This code is intentionally bad. You should try to optimize everything here. THe code here is only to show you how to use the game's
@@ -134,80 +127,23 @@ namespace Joueur.cs.Games.Newtonian
             // Goes through all the units that you own.
             foreach (Unit unit in this.Player.Units) {
                 Tile target = null;
-                needsRedium = (this.Player.Heat < this.Player.Pressure + 5) ? true : false;
+
+                needsRedium = PriorityOre();
 
                 // Only tries to do something if the unit actually exists.
                 if (unit != null && unit.Tile != null) {
                     if (unit.Job.Title == "physicist") {
-                        // If the unit is a physicist, tries to work on machines that are ready, but if there are none,
-                        // it finds and attacks enemy managers.
-
-                        // Tries to find a workable machine for blueium ore.
-                        // Note: You need to get redium ore as well.
-
-                        // Goes through all the machines in the game and picks one that is ready to process ore as its target.
-                        foreach (Machine machine in this.Game.Machines) {
-                            if (machine.Tile.BlueiumOre >= machine.RefineInput) {
-                                target = machine.Tile;
-                            }
-                        }
-
-                        if (target == null) {
-                            // Chases down enemy managers if there are no machines that are ready to be worked.
-                            foreach (Unit enemy in this.Game.Units) {
-                                // Only does anything if the unit that we found is a manager and belongs to our opponent.
-                                if (enemy.Tile != null && enemy.Owner == this.Player.Opponent && enemy.Job.Title == "manager") {
-                                    // Moves towards the manager.
-                                    while (unit.Moves > 0 && this.FindPath(unit.Tile, enemy.Tile).Count > 0) {
-                                        // Moves until there are no moves left for the physicist.
-                                        if (!unit.Move(this.FindPath(unit.Tile, enemy.Tile)[0])) {
-                                            break;
-                                        }
-                                    }
-                                    if (unit.Tile == enemy.Tile.TileEast || unit.Tile == enemy.Tile.TileWest ||
-                                        unit.Tile == enemy.Tile.TileNorth || unit.Tile == enemy.Tile.TileSouth) {
-                                        if (enemy.StunTime == 0 && enemy.StunImmune == 0) {
-                                            // Stuns the enemy manager if they are not stunned and not immune.
-                                            unit.Act(enemy.Tile);
-                                        }
-                                        else {
-                                            // Attacks the manager otherwise.
-                                            unit.Attack(enemy.Tile);
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                        else {
-                            // Gets the tile of the targeted machine if adjacent to it.
-                            bool adjacent = false;
-                            foreach (Tile tile in target.GetNeighbors()) {
-                                if (tile == unit.Tile) {
-                                    adjacent = true;
-                                }
-                            }
-                            // If there is a machine that is waiting to be worked on, go to it.
-                            while (unit.Moves > 0 && this.FindPath(unit.Tile, target).Count > 1) {// && !adjacent) {
-                                if (!unit.Move(this.FindPath(unit.Tile, target)[0])) {
-                                    break;
-                                }
-                            }
-                            // Acts on the target machine to run it if the physicist is adjacent.
-                            if (adjacent && !unit.Acted) {
-                                unit.Act(target);
-                            }
-                        }
+                        Whack(unit, "manager");
+                        WorkItHarderMakeItBetter(unit, target);
                     }
                     else if (unit.Job.Title == "intern") {
                         unit.Log("Expendable");
-                        if (!Whack(unit, "physicist"))
-                        {
-                            if (unit.RediumOre == 0 && unit.BlueiumOre == 0)
-                                FetchOre(unit, target, 4);
-                            else
-                                DropOre(unit, target, 4);
-                        }
+                        Whack(unit, "physicist");
+                        if (unit.RediumOre == 0 && unit.BlueiumOre == 0)
+                            FetchOre(unit, target);
+                        else
+                            DropOre(unit, target);
+                        
                     }
                     ///////////////////////////////////////////CODE FOR MANAGER///////////////////
                     else if (unit.Job.Title == "manager") {
@@ -466,7 +402,7 @@ namespace Joueur.cs.Games.Newtonian
         // you can add additional methods here for your AI to call
 
         //if adjacent enemy is stunnable, stuns, otherwise attacks
-        private bool Whack(Unit unit, String enemyToStun)
+        private void Whack(Unit unit, String enemyToStun)
         {
             foreach (Tile tile in unit.Tile.GetNeighbors())
             {
@@ -479,19 +415,18 @@ namespace Joueur.cs.Games.Newtonian
                             if (tile.Unit.StunImmune == 0)
                             {
                                 unit.Act(tile);
-                                return true;
+                                break;
                             }
                         }
                         unit.Attack(tile);
-                        return true;
+                        break;
                     }
                 }
             }
-            return false;
         }
 
         // picks up adjacent ore or finds ore to move to
-        private void FetchOre(Unit unit, Tile target, int amount)
+        private void FetchOre(Unit unit, Tile target)
         {
             // looks for adjacent ore, if found, picks it up
             foreach(Tile tile in unit.Tile.GetNeighbors())
@@ -499,9 +434,9 @@ namespace Joueur.cs.Games.Newtonian
                 if (tile.Machine == null)
                 {
                     if (tile.RediumOre > 0 && needsRedium)
-                        unit.Pickup(tile, amount, "redium ore");
+                        unit.Pickup(tile, unit.Job.CarryLimit, "redium ore");
                     else if (tile.BlueiumOre > 0 && !needsRedium)
-                        unit.Pickup(tile, amount, "blueium ore");
+                        unit.Pickup(tile, unit.Job.CarryLimit, "blueium ore");
                 }
             }
 
@@ -534,7 +469,7 @@ namespace Joueur.cs.Games.Newtonian
         }
 
         // drops ore on adjacent machine or finds machine to move to
-        private void DropOre(Unit unit, Tile target, int amount)
+        private void DropOre(Unit unit, Tile target)
         {
             // looks for adjacent machine of certain oretype, and drops ore
             foreach(Tile tile in unit.Tile.GetNeighbors())
@@ -542,9 +477,9 @@ namespace Joueur.cs.Games.Newtonian
                 if(tile.Machine != null)
                 {
                     if(tile.Machine.OreType == "redium" && needsRedium) {
-                        unit.Drop(tile, amount, "redium ore");
+                        unit.Drop(tile, unit.Job.CarryLimit, "redium ore");
                     } else if (tile.Machine.OreType == "blueium" && !needsRedium) {
-                        unit.Drop(tile, amount, "blueium ore");
+                        unit.Drop(tile, unit.Job.CarryLimit, "blueium ore");
                     }
                 }
             }
@@ -562,6 +497,58 @@ namespace Joueur.cs.Games.Newtonian
                     {
                         target = tile;
                     }
+                }
+            }
+
+            // moves to machine
+            if (this.FindPath(unit.Tile, target).Count > 0)
+            {
+                while (unit.Moves > 0 && this.FindPath(unit.Tile, target).Count > 0)
+                {
+                    if (!unit.Move(this.FindPath(unit.Tile, target)[0]))
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        private bool PriorityOre()
+        {
+            // true prioritizes redium, false prioritizes blueium
+            if (this.Game.CurrentTurn < 10)
+            {
+                if (redTeam)
+                    return false;
+                return true;
+            }
+            return (this.Player.Heat < this.Player.Pressure + 6);
+        }
+
+        private void WorkItHarderMakeItBetter(Unit unit, Tile target)
+        {
+            // looks for adjacent machine, if found, then works adjacent machine
+            foreach(Tile tile in unit.Tile.GetNeighbors())
+            {
+                if(tile.Machine != null)
+                {
+                    if (tile.Machine.OreType == "redium" && needsRedium && tile.RediumOre >= tile.Machine.RefineInput)
+                        unit.Act(tile);
+                    else if (tile.Machine.OreType == "blueium" && !needsRedium && tile.BlueiumOre >= tile.Machine.RefineInput)
+                        unit.Act(tile);
+                }
+            }
+
+            // finds machine
+            foreach (Machine machine in this.Game.Machines)
+            {
+                if (machine.Tile.RediumOre >= machine.RefineInput && needsRedium)
+                {
+                    target = machine.Tile;
+                }
+                else if (machine.Tile.BlueiumOre >= machine.RefineInput && !needsRedium)
+                {
+                    target = machine.Tile;
                 }
             }
 
