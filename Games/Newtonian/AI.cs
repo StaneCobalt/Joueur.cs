@@ -359,7 +359,7 @@ namespace Joueur.cs.Games.Newtonian
                 if (tile.Redium > 0)
                     unit.Pickup(tile, ammount, "redium");
                 else if (tile.Blueium > 0)
-                    unit.Pickup(tile, ammount, "blueum");
+                    unit.Pickup(tile, ammount, "blueium");
             }
             foreach(Tile tile in this.Game.Tiles)
             {
