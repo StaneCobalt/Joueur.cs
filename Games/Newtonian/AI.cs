@@ -245,10 +245,123 @@ namespace Joueur.cs.Games.Newtonian
                             }
                         }
                     }
+                    ///////////////////////////////////////////CODE FOR MANAGER///////////////////
                     else if (unit.Job.Title == "manager") {
                         // Finds enemy interns, stuns, and attacks them if there is no blueium to take to the generator.
-                        Tile target = null;
+                        Tile physicist = null;
+                        Tile intern = null;
+                        bool physicistFound = false;
+                        bool internFound = false;
+                        int currentPathLength = 0;
 
+                        //find the first physicist.  set him as the target
+                        foreach(Unit gameUnit in this.Game.Units)
+                        {
+                            if (gameUnit.Job.Title == "physicist" && gameUnit.Owner == this.Player)
+                            {
+                                //if another physicist is already target, see which is closer.
+                                if (physicistFound)
+                                {
+                                    if (currentPathLength > FindPath(unit.Tile, gameUnit.Tile).Count)
+                                    {
+                                        //if the new path is shorter, reset target to short path
+                                        physicist = gameUnit.Tile;
+                                        currentPathLength = FindPath(unit.Tile, gameUnit.Tile).Count;
+                                    }
+                                }
+                                else
+                                {
+                                    //the first physicist found is set here:
+                                    physicistFound = true;
+                                    physicist = gameUnit.Tile;
+                                    currentPathLength = FindPath(unit.Tile, gameUnit.Tile).Count;
+                                }
+                            }
+                        }
+                        // if there is an intern near the closest physicist, then protect the physicist.
+                        int mode = 1;
+                        foreach(Tile tile in physicist.GetNeighbors())
+                        {
+                            foreach(Tile innerTile in tile.GetNeighbors())
+                            {
+                                if (innerTile.Unit != null)
+                                {
+                                    if (innerTile.Unit.Job.Title == "intern" && innerTile.Unit.Owner == this.Player.Opponent)
+                                    {
+                                        //if intern is found within 2 blocks of physicist, then switch to
+                                        //attack the intern.
+                                        mode = 2;
+                                        internFound = true;
+                                        intern = tile;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        /*
+                        foreach(Tile tile in physicist.GetNeighbors(2))
+                        {
+                            if (tile != null && tile.Unit.Job.Title == "intern" && tile.Unit.Owner == this.Player.Opponent)
+                            {
+                                //if intern is found within 2 blocks of physicist, then switch to
+                                //attack the intern.
+                                mode = 2;
+                                internFound = true;
+                                intern = tile;
+                                break;
+                            }  
+                        }*/ //the code for GetNeighbors(int n) is broken
+                        //1: follow physicist, 2 = attack intern
+                        if (mode == 2)
+                        {
+                            //attack nearest intern
+                            //if intern was found, and it isn't already in attacking distance:
+                            if (internFound && unit.Tile.GetNeighbors().Contains(intern))
+                            {
+                                if (this.FindPath(unit.Tile, intern).Count > 0)
+                                {
+                                    while (unit.Moves > 0 && this.FindPath(unit.Tile, intern).Count > 0)
+                                    {
+                                        if (!unit.Move(this.FindPath(unit.Tile, intern)[0]))
+                                        {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (this.FindPath(unit.Tile, physicist).Count > 0)
+                            {
+                                while (unit.Moves > 0 && this.FindPath(unit.Tile, physicist).Count > 0)
+                                {
+                                    if (!unit.Move(this.FindPath(unit.Tile, physicist)[0]))
+                                    {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //follow the targeted physicist. 
+                            //if no physicist found, then continue with program.
+                            if (physicistFound)
+                            {
+                                if (this.FindPath(unit.Tile, physicist).Count > 0)
+                                {
+                                    while (unit.Moves > 0 && this.FindPath(unit.Tile, physicist).Count > 0)
+                                    {
+                                        if (!unit.Move(this.FindPath(unit.Tile, physicist)[0]))
+                                        {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+
+                        /*
                         foreach (Tile tile in this.Game.Tiles) {
                             if (tile.Blueium > 1 && unit.Blueium < unit.Job.CarryLimit) {
                                 target = tile;
@@ -307,7 +420,7 @@ namespace Joueur.cs.Games.Newtonian
                             if (this.FindPath(unit.Tile, genTile).Count <= 1) {
                                 unit.Drop(unit.Tile, 0, "blueium");
                             }
-                        }
+                        } */
                     }
                 }
             }

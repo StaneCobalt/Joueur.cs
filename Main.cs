@@ -141,6 +141,7 @@ namespace Joueur.cs
             }
 
             client.Play();
+            Console.ReadKey();
         }
     }
 }

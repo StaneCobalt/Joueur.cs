@@ -185,7 +185,58 @@ namespace Joueur.cs.Games.Newtonian
 
         // <<-- Creer-Merge: methods -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
         // you can add additional method(s) here.
-        // <<-- /Creer-Merge: methods -->>
+
+            //works like getNeighbors but you tell it how many layers to examine.
+            //if n==1 then it just returns GetNeighbors()
+            //if n==2 then it returns a list of tiles within 2 tiles of the tile
+            //and so on
+            //FAULT: IT will be full of duplicates, thus lowering efficiency of the program.
+            //the higher n is, the more duplicates will be added, exponentially
+
+            //THIS FUNCTION IS BROKEN DONT USE IT
+        public List<Tile> GetNeighbors(int n)
+        {
+            var list = this.GetNeighbors();
+            var temp = list;
+            if (n == 1)
+            {
+                //do nothing, list is being returned anyway.
+            }
+            else
+            {
+                for (int i = 1; i < n; i++)
+                {
+                    foreach(Tile tile in list)
+                    {
+                        if (tile.TileNorth != null)
+                        {
+                            temp.Add(tile.TileNorth);
+                        }
+
+                        if (tile.TileEast != null)
+                        {
+                            temp.Add(tile.TileEast);
+                        }
+
+                        if (tile.TileSouth != null)
+                        {
+                            temp.Add(tile.TileSouth);
+                        }
+
+                        if (tile.TileWest != null)
+                        {
+                            temp.Add(tile.TileWest);
+                        }
+                    }
+                    list = temp;
+                }
+            }
+            //return the resulting list.
+            return list;
+
+
+
+        }// <<-- /Creer-Merge: methods -->>
         #endregion
     }
 }
