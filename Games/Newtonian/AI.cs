@@ -131,22 +131,26 @@ namespace Joueur.cs.Games.Newtonian
                 needsRedium = PriorityOre();
 
                 // Only tries to do something if the unit actually exists.
-                if (unit != null && unit.Tile != null) {
-                    if (unit.Job.Title == "physicist") {
+                if (unit != null && unit.Tile != null)
+                {
+                    if (unit.Job.Title == "physicist")
+                    {
                         Whack(unit, "manager");
                         WorkItHarderMakeItBetter(unit, target);
                     }
-                    else if (unit.Job.Title == "intern") {
+                    else if (unit.Job.Title == "intern")
+                    {
                         unit.Log("Expendable");
                         Whack(unit, "physicist");
                         if (unit.RediumOre == 0 && unit.BlueiumOre == 0)
                             FetchOre(unit, target);
                         else
                             DropOre(unit, target);
-                        
+
                     }
                     ///////////////////////////////////////////CODE FOR MANAGER///////////////////
-                    else if (unit.Job.Title == "manager") {
+                    else if (unit.Job.Title == "manager")
+                    {
                         unit.Log("Bouncer");
 
                         // Finds enemy interns, stuns, and attacks them if there is no blueium to take to the generator.
@@ -158,9 +162,10 @@ namespace Joueur.cs.Games.Newtonian
                         bool internFound = false;
                         bool refinedExists = false;
                         int currentPathLength = 0;
-                        
-                    //Prioritize collecting refined material:
-                        foreach(Tile tile in this.Game.Tiles)
+                        int mode = 0;
+
+                        //Prioritize collecting refined material:
+                        foreach (Tile tile in this.Game.Tiles)
                         {
                             if (tile.Redium > 0 || tile.Blueium > 0)
                             {
@@ -173,57 +178,57 @@ namespace Joueur.cs.Games.Newtonian
                         {
                             FetchRefined(unit, refined, 3);
                         }
-                        else if(unit.Blueium + unit.Redium == 3)
+                        else if (unit.Blueium + unit.Redium == 3)
                         {
                             DropRefined(unit, generator, 3);
                         }
-                        
+
                         else //do other manager things
                         {
-                        //find the first physicist.  set him as the target
-                        foreach(Unit gameUnit in this.Game.Units)
-                        {
-                            if (gameUnit.Job.Title == "physicist" && gameUnit.Owner == this.Player)
+                            //find the first physicist.  set him as the target
+                            foreach (Unit gameUnit in this.Game.Units)
                             {
-                                //if another physicist is already target, see which is closer.
-                                if (physicistFound)
+                                if (gameUnit.Job.Title == "physicist" && gameUnit.Owner == this.Player)
                                 {
-                                    if (currentPathLength > FindPath(unit.Tile, gameUnit.Tile).Count)
+                                    //if another physicist is already target, see which is closer.
+                                    if (physicistFound)
                                     {
-                                        //if the new path is shorter, reset target to short path
+                                        if (currentPathLength > FindPath(unit.Tile, gameUnit.Tile).Count)
+                                        {
+                                            //if the new path is shorter, reset target to short path
+                                            physicist = gameUnit.Tile;
+                                            currentPathLength = FindPath(unit.Tile, gameUnit.Tile).Count;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        //the first physicist found is set here:
+                                        physicistFound = true;
                                         physicist = gameUnit.Tile;
                                         currentPathLength = FindPath(unit.Tile, gameUnit.Tile).Count;
                                     }
                                 }
-                                else
-                                {
-                                    //the first physicist found is set here:
-                                    physicistFound = true;
-                                    physicist = gameUnit.Tile;
-                                    currentPathLength = FindPath(unit.Tile, gameUnit.Tile).Count;
-                                }
                             }
-                        }
-                        // if there is an intern near the closest physicist, then protect the physicist.
-                        int mode = 1;
-                        foreach(Tile tile in physicist.GetNeighbors())
-                        {
-                            foreach(Tile innerTile in tile.GetNeighbors())
+                            // if there is an intern near the closest physicist, then protect the physicist.
+                            mode = 1;
+                            foreach (Tile tile in physicist.GetNeighbors())
                             {
-                                if (innerTile.Unit != null)
+                                foreach (Tile innerTile in tile.GetNeighbors())
                                 {
-                                    if (innerTile.Unit.Job.Title == "intern" && innerTile.Unit.Owner == this.Player.Opponent)
+                                    if (innerTile.Unit != null)
                                     {
-                                        //if intern is found within 2 blocks of physicist, then switch to
-                                        //attack the intern.
-                                        mode = 2;
-                                        internFound = true;
-                                        intern = tile;
-                                        break;
+                                        if (innerTile.Unit.Job.Title == "intern" && innerTile.Unit.Owner == this.Player.Opponent)
+                                        {
+                                            //if intern is found within 2 blocks of physicist, then switch to
+                                            //attack the intern.
+                                            mode = 2;
+                                            internFound = true;
+                                            intern = tile;
+                                            break;
+                                        }
                                     }
                                 }
                             }
-                        }
                         }
                         /*
                         foreach(Tile tile in physicist.GetNeighbors(2))
@@ -286,68 +291,6 @@ namespace Joueur.cs.Games.Newtonian
                                 }
                             }
                         }
-
-
-                        /*
-                        foreach (Tile tile in this.Game.Tiles) {
-                            if (tile.Blueium > 1 && unit.Blueium < unit.Job.CarryLimit) {
-                                target = tile;
-                            }
-                        }
-                        if (target == null && unit.Blueium == 0) {
-                            foreach (Unit enemy in this.Game.Units) {
-                                // Only does anything for an intern that is owned by your opponent.
-                                if (enemy.Tile != null && enemy.Owner == this.Player.Opponent && enemy.Job.Title == "intern") {
-                                    // Moves towards the intern until reached or out of moves.
-                                    while (unit.Moves > 0 && this.FindPath(unit.Tile, enemy.Tile).Count > 1) {
-                                        if (!unit.Move(this.FindPath(unit.Tile, enemy.Tile)[0])) {
-                                            break;
-                                        }
-                                    }
-                                    // Either stuns or attacks the intern if we are within range.
-                                    if (unit.Tile == enemy.Tile.TileEast || unit.Tile == enemy.Tile.TileWest ||
-                                        unit.Tile == enemy.Tile.TileNorth || unit.Tile == enemy.Tile.TileSouth) {
-                                        if (enemy.StunTime == 0 && enemy.StunImmune == 0) {
-                                            // Stuns the enemy intern if they are not stunned and not immune.
-                                            unit.Act(enemy.Tile);
-                                        }
-                                        else {
-                                            // Attacks the intern otherwise.
-                                            unit.Attack(enemy.Tile);
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                        else if (target != null) {
-                            // Moves towards our target until at the target or out of moves.
-                            while (unit.Moves > 0 && this.FindPath(unit.Tile, target).Count > 1) {
-                                if (!unit.Move(this.FindPath(unit.Tile, target)[0])) {
-                                    break;
-                                }
-                            }
-                            // Picks up blueium once we reach our target's tile.
-                            if (this.FindPath(unit.Tile, target).Count <= 1 && target.Blueium > 0) {
-                                unit.Pickup(target, 0, "blueium");
-                            }
-                        }
-                        else if (target == null && unit.Blueium > 0) {
-                            // Stores a tile that is part of your generator.
-                            Tile genTile = this.Player.GeneratorTiles[0];
-
-                            // Goes to your generator and drops blueium in.
-                            while (unit.Moves > 0 && this.FindPath(unit.Tile, genTile).Count > 0) {
-                                if (!unit.Move(this.FindPath(unit.Tile, genTile)[0])) {
-                                    break;
-                                }
-                            }
-
-                            // Deposits blueium in our generator if we have reached it.
-                            if (this.FindPath(unit.Tile, genTile).Count <= 1) {
-                                unit.Drop(unit.Tile, 0, "blueium");
-                            }
-                        } */
                     }
                 }
             }
@@ -534,11 +477,11 @@ namespace Joueur.cs.Games.Newtonian
         private void DropOre(Unit unit, Tile target)
         {
             // looks for adjacent machine of certain oretype, and drops ore
-            foreach(Tile tile in unit.Tile.GetNeighbors())
+            foreach (Tile tile in unit.Tile.GetNeighbors())
             {
-                if(tile.Machine != null)
+                if (tile.Machine != null)
                 {
-                    if(tile.Machine.OreType == "redium" && needsRedium) {
+                    if (tile.Machine.OreType == "redium" && needsRedium) {
                         unit.Drop(tile, unit.Job.CarryLimit, "redium ore");
                     } else if (tile.Machine.OreType == "blueium" && !needsRedium) {
                         unit.Drop(tile, unit.Job.CarryLimit, "blueium ore");
@@ -561,8 +504,9 @@ namespace Joueur.cs.Games.Newtonian
                     }
                 }
             }
+        }
             
-            //run this if a manager has refined material
+        //run this if a manager has refined material
         //drops off refined at friendly generator, or runs to friendly generator.
         private void DropRefined(Unit unit, Tile target, int ammount)
         {
@@ -599,9 +543,6 @@ namespace Joueur.cs.Games.Newtonian
                     }
                 }
             }
-    
-
-        } 
 
             // moves to machine
             if (this.FindPath(unit.Tile, target).Count > 0)
