@@ -153,15 +153,37 @@ namespace Joueur.cs.Games.Newtonian
                     {
                         unit.Log("Bouncer");
 
+
                         // Finds enemy interns, stuns, and attacks them if there is no blueium to take to the generator.
                         Tile refined = null;
                         Tile generator = null;
-                        bool physicistFound = false;
                         bool internFound = false;
+                        bool physicistFound = false;
                         bool refinedExists = false;
-                        int currentPathLength = 0;
                         int mode = 0;
 
+                        if (this.Game.CurrentTurn <= 2)
+                        {
+                            foreach (Tile tile in this.Game.Tiles)
+                            {
+                                if (tile.Owner == this.Player.Opponent)
+                                {
+                                    target = tile;
+                                    break;
+                                }
+                            }
+                            if (this.FindPath(unit.Tile, target).Count > 0)
+                            {
+                                while (unit.Moves > 0 && this.FindPath(unit.Tile, target).Count > 0)
+                                {
+                                    if (!unit.Move(this.FindPath(unit.Tile, target)[0]))
+                                    {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
                         //Prioritize collecting refined material:
                         foreach (Tile tile in this.Game.Tiles)
                         {
@@ -180,7 +202,12 @@ namespace Joueur.cs.Games.Newtonian
                         {
                             DropRefined(unit, generator, 3);
                         }
-                    }
+
+                        Guard(unit, target, physicistFound);
+
+
+
+                    }//end if manager
                 }
             }
 
@@ -503,54 +530,40 @@ namespace Joueur.cs.Games.Newtonian
         //third moves toward physicist
         private void Guard(Unit unit, Tile target, bool physicistFound)
         {
-            // finds intern
-            foreach (Tile tile in unit.Tile.GetNeighbors())
-            {
-                if (tile.Unit != null)
-                {
-                    if (tile.Unit.Job.Title == "physicist" && tile.Unit.Owner == this.Player)
-                    {
-                        foreach (Tile tile2 in tile.GetNeighbors())
-                        {
-                            if (tile2.Unit != null)
-                            {
-                                if (tile2.Unit.Job.Title == "intern" && tile2.Owner != this.Player)
-                                {
-                                    target = tile2;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            /*
-            Tile physicist;
+            //Finds closest physicist:
             int currentPathLength = 0;
+            physicistFound = false;
             foreach (Unit gameUnit in this.Game.Units)
             {
                 if (gameUnit.Job.Title == "physicist" && gameUnit.Owner == this.Player)
                 {
-                    //if another physicist is already target, see which is closer.
                     if (physicistFound)
                     {
                         if (currentPathLength > FindPath(unit.Tile, gameUnit.Tile).Count)
                         {
-                            //if the new path is shorter, reset target to short path
-                            physicist = gameUnit.Tile;
+                            target = gameUnit.Tile;
                             currentPathLength = FindPath(unit.Tile, gameUnit.Tile).Count;
                         }
                     }
                     else
                     {
-                        //the first physicist found is set here:
                         physicistFound = true;
-                        physicist = gameUnit.Tile;
+                        target = gameUnit.Tile;
                         currentPathLength = FindPath(unit.Tile, gameUnit.Tile).Count;
                     }
                 }
             }
-            */
+            //move to target
+            if (this.FindPath(unit.Tile, target).Count > 0)
+            {
+                while (unit.Moves > 0 && this.FindPath(unit.Tile, target).Count > 0)
+                {
+                    if (!unit.Move(this.FindPath(unit.Tile, target)[0]))
+                    {
+                        break;
+                    }
+                }
+            }
         }
 
         private void DisplayMap() {
