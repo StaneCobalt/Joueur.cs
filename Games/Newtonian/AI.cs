@@ -188,6 +188,15 @@ namespace Joueur.cs.Games.Newtonian
                                 }
                             }
                         }
+                        else if(this.Game.CurrentTurn > 150)
+                        {
+                            FetchRefined(unit, target, 3);
+                            if (!unit.Acted)
+                                DropRefined(unit, target, 3);
+                            if (!unit.Acted)
+                                Whack(unit, "intern");
+                        }
+
                         else
                         {
                             //Prioritize collecting refined material:
@@ -204,12 +213,13 @@ namespace Joueur.cs.Games.Newtonian
                             {
                                 FetchRefined(unit, refined, 3);
                             }
-                            else if (unit.Blueium + unit.Redium == 3)
+                            else if (unit.Blueium + unit.Redium >= 3)
                             {
                                 DropRefined(unit, generator, 3);
                             }
 
-                            Guard(unit, target, physicistFound);
+                            if(!unit.Acted)
+                                Guard(unit, target, physicistFound);
                         }
                     }//end if manager
                 }
@@ -421,12 +431,6 @@ namespace Joueur.cs.Games.Newtonian
                 }
             }
 
-            if(target == null)
-            {
-                Console.WriteLine("No target!");
-                return;
-            }
-
             // moves to machine
             if (this.FindPath(unit.Tile, target).Count > 0)
             {
@@ -475,27 +479,29 @@ namespace Joueur.cs.Games.Newtonian
         //drops off refined at friendly generator, or runs to friendly generator.
         private void DropRefined(Unit unit, Tile target, int ammount)
         {
-            bool friendlyFound = false;
             //drop refined in friendly generator:
             foreach(Tile tile in unit.Tile.GetNeighbors())
             {
                 if(tile.Type == "generator" && tile.Owner == this.Player)
                 {
-                    friendlyFound = true;
-                    if (unit.Blueium > 0)
-                        unit.Drop(tile, unit.Blueium, "blueium");
-                    else if (unit.Redium > 0)
-                        unit.Drop(tile, unit.Redium, "redium");
-                    else Console.WriteLine(unit.ToString() + ": Error, nothing to drop off");
+                    if (unit.Blueium > 0 || unit.Redium > 0)
+                    {
+                        if(unit.Blueium > 0)
+                            unit.Drop(tile, unit.Blueium, "blueium");
+                        if(unit.Redium > 0)
+                            unit.Drop(tile, unit.Redium, "redium");
+                        break;
+                    }
                 }
             }
+
             //find friendly generator:
-            if (!friendlyFound)
+            foreach (Tile tile in this.Player.GeneratorTiles)
             {
-                foreach (Tile tile in this.Game.Tiles)
+                if (tile.Owner == this.Player)
                 {
-                    if (tile.Type == "generator" && tile.Owner == this.Player)
-                        target = tile;
+                    target = tile;
+                    break;
                 }
             }
 
@@ -510,8 +516,6 @@ namespace Joueur.cs.Games.Newtonian
                     }
                 }
             }
-
-
         }
 
         private bool PriorityOre()
