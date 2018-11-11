@@ -35,6 +35,7 @@ namespace Joueur.cs.Games.Newtonian
         List<Unit> interns { get; set; }
         List<Unit> managers { get; set; }
         List<Unit> physicists { get; set; }
+        bool needsRedium { get; set; }
         // <<-- /Creer-Merge: properties -->>
         #endregion
 
@@ -119,18 +120,6 @@ namespace Joueur.cs.Games.Newtonian
         /// <returns>Represents if you want to end your turn. True means end your turn, False means to keep your turn going and re-call this function.</returns>
         public bool RunTurn()
         {
-            Tile target = null;
-
-            bool needsRedium = false;
-            if (this.Player.Heat < this.Player.Pressure + 10)
-            {
-                needsRedium = true;
-            }
-            else
-            {
-                needsRedium = false;
-            }
-
             // <<-- Creer-Merge: runTurn -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
             // Put your game logic here for runTurn
             /*DisplayMap();
@@ -144,6 +133,9 @@ namespace Joueur.cs.Games.Newtonian
 
             // Goes through all the units that you own.
             foreach (Unit unit in this.Player.Units) {
+                Tile target = null;
+                needsRedium = (this.Player.Heat < this.Player.Pressure + 5) ? true : false;
+
                 // Only tries to do something if the unit actually exists.
                 if (unit != null && unit.Tile != null) {
                     if (unit.Job.Title == "physicist") {
@@ -211,12 +203,14 @@ namespace Joueur.cs.Games.Newtonian
                         unit.Log("Hitman");
                         if (!Whack(unit, "physicist"))
                         {
-                            FetchOre(unit, target);
+                            if (unit.RediumOre == 0 && unit.BlueiumOre == 0)
+                                FetchOre(unit, target, 4);
+                            else
+                                DropOre(unit, target, 4);
                         }
                     }
                     ///////////////////////////////////////////CODE FOR MANAGER///////////////////
                     else if (unit.Job.Title == "manager") {
-
                         unit.Log("Body Guard");
 
                         // Finds enemy interns, stuns, and attacks them if there is no blueium to take to the generator.
@@ -471,6 +465,7 @@ namespace Joueur.cs.Games.Newtonian
         // <<-- Creer-Merge: methods -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
         // you can add additional methods here for your AI to call
 
+        //if adjacent enemy is stunnable, stuns, otherwise attacks
         private bool Whack(Unit unit, String enemyToStun)
         {
             foreach (Tile tile in unit.Tile.GetNeighbors())
@@ -495,9 +490,16 @@ namespace Joueur.cs.Games.Newtonian
             return false;
         }
 
-        private void FetchOre(Unit unit, Tile target)
+        // picks up adjacent ore or finds ore to move to
+        private void FetchOre(Unit unit, Tile target, int amount)
         {
-            bool needsRedium = (this.Player.Heat < this.Player.Pressure + 5) ? true : false;
+            foreach(Tile tile in unit.Tile.GetNeighbors())
+            {
+                if (tile.RediumOre > 0 && needsRedium)
+                    unit.Pickup(target, amount, "redium ore");
+                else if (tile.BlueiumOre > 0 && !needsRedium)
+                    unit.Pickup(target, amount, "blueium ore");
+            }
 
             foreach (Tile tile in this.Game.Tiles)
             {
@@ -523,12 +525,47 @@ namespace Joueur.cs.Games.Newtonian
                     }
                 }
             }
-            else if (this.FindPath(unit.Tile, target).Count == 0)
+        }
+
+        // drops ore on adjacent machine or finds machine to move to
+        private void DropOre(Unit unit, Tile target, int amount)
+        {
+            foreach(Tile tile in unit.Tile.GetNeighbors())
             {
-                if (needsRedium)
-                    unit.Pickup(target, 4, "redium ore");
-                else
-                    unit.Pickup(target, 4, "bluemium ore");
+                if(tile.Machine != null)
+                {
+                    if(tile.Machine.OreType == "redium" && needsRedium) {
+                        unit.Drop(tile, amount, "redium ore");
+                    } else if (tile.Machine.OreType == "blueium" && !needsRedium) {
+                        unit.Drop(tile, amount, "blueium ore");
+                    }
+                }
+            }
+
+            foreach (Tile tile in this.Game.Tiles)
+            {
+                if (tile.Machine != null)
+                {
+                    if (tile.Machine.OreType == "redium" && needsRedium)
+                    {
+                        target = tile;
+                    }
+                    else if (tile.Machine.OreType == "blueium" && !needsRedium)
+                    {
+                        target = tile;
+                    }
+                }
+            }
+
+            if (this.FindPath(unit.Tile, target).Count > 0)
+            {
+                while (unit.Moves > 0 && this.FindPath(unit.Tile, target).Count > 0)
+                {
+                    if (!unit.Move(this.FindPath(unit.Tile, target)[0]))
+                    {
+                        break;
+                    }
+                }
             }
         }
 
